@@ -1,9 +1,8 @@
 """
 Streamlit UI for Uzbekistan Ministry of Construction RAG System
-Professional interface for querying construction law documents
+Professional interface with processing events and status updates
 """
 
-# Fix NLTK permissions issue on Streamlit Cloud
 import os
 os.environ["NLTK_DATA"] = "/tmp/nltk_data"
 
@@ -11,9 +10,10 @@ import streamlit as st
 from typing import List, Dict
 from dotenv import load_dotenv
 from datetime import datetime
+import time
 import nltk
 
-# Download NLTK data to /tmp (writable on Streamlit Cloud)
+# Download NLTK data
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -23,8 +23,7 @@ except LookupError:
 from llama_index.core import (
     VectorStoreIndex,
     Settings,
-    PromptTemplate,
-    StorageContext
+    PromptTemplate
 )
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
@@ -34,6 +33,16 @@ import chromadb
 # Load environment variables
 load_dotenv()
 
+# Try to get secrets from Streamlit secrets (for cloud deployment)
+def get_api_key(key_name: str) -> str:
+    """Get API key from Streamlit secrets or environment variables"""
+    # Try Streamlit secrets first (for cloud deployment)
+    try:
+        return st.secrets[key_name]
+    except (KeyError, FileNotFoundError, AttributeError):
+        # Fall back to environment variables (for local development)
+        return os.getenv(key_name)
+
 # Page configuration
 st.set_page_config(
     page_title="Qurilish Vazirligi - AI Yordamchi",
@@ -42,22 +51,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS styling
+# Professional CSS styling (same as before)
 st.markdown("""
 <style>
-    /* Import professional font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    * {
-        font-family: 'Inter', sans-serif;
-    }
+    * { font-family: 'Inter', sans-serif; }
     
-    /* Main background with subtle gradient */
-    .stApp {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    }
+    .stApp { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
     
-    /* Header with professional gradient */
     .main-header {
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
         padding: 2.5rem 2rem;
@@ -82,7 +84,6 @@ st.markdown("""
         font-weight: 400;
     }
     
-    /* Professional chat messages */
     .stChatMessage {
         background: white;
         border-radius: 12px;
@@ -92,7 +93,6 @@ st.markdown("""
         border: 1px solid rgba(0, 0, 0, 0.06);
     }
     
-    /* Stats cards */
     .stat-card {
         background: white;
         padding: 1.5rem;
@@ -126,13 +126,11 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
     
-    /* Professional sidebar */
     [data-testid="stSidebar"] {
         background: white;
         border-right: 1px solid rgba(0, 0, 0, 0.08);
     }
     
-    /* Example question buttons */
     .stButton button {
         background: white;
         border: 1px solid #e5e7eb;
@@ -140,6 +138,8 @@ st.markdown("""
         padding: 0.75rem 1rem;
         font-weight: 500;
         transition: all 0.2s ease;
+        width: 100%;
+        text-align: left;
     }
     
     .stButton button:hover {
@@ -149,7 +149,6 @@ st.markdown("""
         transform: translateX(4px);
     }
     
-    /* Source expander */
     .streamlit-expanderHeader {
         background: #f9fafb;
         border-radius: 8px;
@@ -157,19 +156,30 @@ st.markdown("""
         color: #374151;
     }
     
-    /* Input styling */
-    .stChatInput {
-        border-radius: 12px;
+    .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin: 0.25rem 0;
     }
     
-    /* Divider */
-    hr {
-        margin: 1.5rem 0;
-        border: none;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
+    .status-loading {
+        background: #dbeafe;
+        color: #1e40af;
     }
     
-    /* Badge style */
+    .status-success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-error {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
     .badge {
         display: inline-block;
         padding: 0.25rem 0.75rem;
@@ -184,32 +194,54 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def check_api_keys():
+    """Check if required API keys are configured"""
+    openai_key = get_api_key("OPENAI_API_KEY")
+    llama_key = get_api_key("LLAMA_CLOUD_API_KEY")
+    
+    missing_keys = []
+    if not openai_key or openai_key == "sk-proj-your-actual-api-key-here":
+        missing_keys.append("OPENAI_API_KEY")
+    if not llama_key or llama_key == "llx-your-llamaparse-key-here":
+        missing_keys.append("LLAMA_CLOUD_API_KEY")
+    
+    return missing_keys
+
+
 @st.cache_resource(show_spinner=False)
 def initialize_query_system():
     """Initialize and cache the query system"""
     
     try:
+        # Check API keys first
+        missing = check_api_keys()
+        if missing:
+            raise ValueError(f"❌ API kalitlari topilmadi: {', '.join(missing)}\n\n"
+                           "Iltimos, .env faylini tekshiring!")
+        
         # Configure LlamaIndex settings
         Settings.llm = OpenAI(
             model="gpt-4o",
             temperature=0.1,
-            api_key=os.getenv("OPENAI_API_KEY")
+            api_key=get_api_key("OPENAI_API_KEY")
         )
         Settings.embed_model = OpenAIEmbedding(
             model="text-embedding-3-small",
-            api_key=os.getenv("OPENAI_API_KEY")
+            api_key=get_api_key("OPENAI_API_KEY")
         )
         
         # Load index
-        persist_dir = "./storage"
-        collection_name = "construction_laws"
+        persist_dir = os.getenv("PERSIST_DIR", "./storage")
+        collection_name = os.getenv("COLLECTION_NAME", "construction_laws")
         
         if not os.path.exists(persist_dir):
-            raise ValueError("❌ Indeks topilmadi! Avval data_ingestion.py ni ishga tushiring.")
+            raise ValueError(
+                f"❌ Indeks topilmadi: {persist_dir}\n\n"
+                "Avval data_ingestion.py ni ishga tushiring!"
+            )
         
-        # Initialize ChromaDB - simple client without custom settings
+        # Initialize ChromaDB
         db = chromadb.PersistentClient(path=persist_dir)
-        
         chroma_collection = db.get_collection(collection_name)
         vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
         
@@ -229,7 +261,7 @@ Kontekst ma'lumotlari:
 
 Savol: {query_str}
 
-Javob formatı:
+Javob formatі:
 📋 QISQA JAVOB: [1-2 jumla asosiy javob]
 
 📖 BATAFSIL TUSHUNTIRISH:
@@ -255,24 +287,67 @@ Javob:"""
         raise e
 
 
-def query_documents(query_engine, question: str) -> Dict:
-    """Query the RAG system and return results"""
-    response = query_engine.query(question)
+def query_documents(query_engine, question: str, status_placeholder) -> Dict:
+    """Query the RAG system with status updates"""
     
-    # Extract sources
-    sources = []
-    for i, node in enumerate(response.source_nodes, 1):
-        metadata = node.node.metadata
-        sources.append({
-            'rank': i,
-            'file_name': metadata.get('file_name', 'Noma\'lum hujjat'),
-            'score': node.score
-        })
-    
-    return {
-        'answer': str(response),
-        'sources': sources
-    }
+    try:
+        # Step 1: Retrieving relevant chunks
+        status_placeholder.markdown(
+            '<div class="status-badge status-loading">🔍 1/3 - Tegishli hujjatlar qidirilmoqda...</div>',
+            unsafe_allow_html=True
+        )
+        time.sleep(0.3)  # Brief pause for visual feedback
+        
+        # Step 2: Processing
+        status_placeholder.markdown(
+            '<div class="status-badge status-loading">⚙️ 2/3 - Ma\'lumotlar tahlil qilinmoqda...</div>',
+            unsafe_allow_html=True
+        )
+        
+        # Query the system
+        response = query_engine.query(question)
+        
+        # Step 3: Generating answer
+        status_placeholder.markdown(
+            '<div class="status-badge status-loading">✍️ 3/3 - Javob tayyorlanmoqda...</div>',
+            unsafe_allow_html=True
+        )
+        time.sleep(0.2)
+        
+        # Extract sources
+        sources = []
+        for i, node in enumerate(response.source_nodes, 1):
+            metadata = node.node.metadata
+            sources.append({
+                'rank': i,
+                'file_name': metadata.get('file_name', 'Noma\'lum hujjat'),
+                'score': node.score
+            })
+        
+        # Success
+        status_placeholder.markdown(
+            '<div class="status-badge status-success">✅ Tayyor!</div>',
+            unsafe_allow_html=True
+        )
+        time.sleep(0.5)
+        status_placeholder.empty()  # Clear the status
+        
+        return {
+            'answer': str(response),
+            'sources': sources,
+            'success': True
+        }
+        
+    except Exception as e:
+        status_placeholder.markdown(
+            f'<div class="status-badge status-error">❌ Xatolik: {str(e)}</div>',
+            unsafe_allow_html=True
+        )
+        return {
+            'answer': f"Kechirasiz, javob tayyorlashda xatolik yuz berdi: {str(e)}",
+            'sources': [],
+            'success': False
+        }
 
 
 def display_sources(sources: List[Dict]):
@@ -285,6 +360,14 @@ def display_sources(sources: List[Dict]):
             with col2:
                 st.markdown(f"<span class='badge'>{src['score']:.0%} mos</span>", unsafe_allow_html=True)
             st.markdown("")
+
+
+def process_question(question: str):
+    """Add question to chat and trigger response"""
+    if question.strip():
+        st.session_state.messages.append({"role": "user", "content": question})
+        st.session_state.pending_query = question
+        st.session_state.query_count += 1
 
 
 def main():
@@ -303,14 +386,44 @@ def main():
     if "query_count" not in st.session_state:
         st.session_state.query_count = 0
     
+    if "pending_query" not in st.session_state:
+        st.session_state.pending_query = None
+    
+    # Check API keys before initializing
+    missing_keys = check_api_keys()
+    if missing_keys:
+        st.error(f"""
+        ❌ **API Kalitlari topilmadi!**
+        
+        Quyidagi kalitlar topilmadi:
+        {', '.join([f'`{k}`' for k in missing_keys])}
+        
+        **Streamlit Cloud'da:**
+        1. App Settings ⚙️ → Secrets ga o'ting
+        2. Quyidagi formatda kiriting:
+        ```toml
+        OPENAI_API_KEY = "sk-proj-..."
+        LLAMA_CLOUD_API_KEY = "llx-..."
+        ```
+        
+        **Local development uchun:**
+        1. `.env` faylini yarating
+        2. Kalitlarni qo'shing:
+        ```
+        OPENAI_API_KEY=sk-proj-...
+        LLAMA_CLOUD_API_KEY=llx-...
+        ```
+        """)
+        st.stop()
+    
     # Initialize query system
     with st.spinner("⏳ Tizim yuklanmoqda..."):
         try:
             query_engine, collection = initialize_query_system()
             doc_count = collection.count()
         except Exception as e:
-            st.error(f"❌ Tizimni yuklashda xatolik: {str(e)}")
-            st.info("💡 Iltimos, storage/ papkasining mavjudligini tekshiring.")
+            st.error(f"❌ Tizimni yuklashda xatolik:\n\n{str(e)}")
+            st.info("💡 Iltimos, storage/ papkasining mavjudligini va API kalitlarini tekshiring.")
             st.stop()
     
     # Sidebar
@@ -348,12 +461,14 @@ def main():
         
         example_questions = [
             "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor?",
-            "A.I. Ikramov kim?"
+            "A.I. Ikramov kim?",
+            "Qurilish litsenziyasi olish talablari qanday?"
         ]
         
         for q in example_questions:
-            if st.button(q, key=f"example_{q}", use_container_width=True):
-                st.session_state.messages.append({"role": "user", "content": q})
+            # Use unique key and callback
+            if st.button(q, key=f"example_{hash(q)}", use_container_width=True):
+                process_question(q)
                 st.rerun()
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -362,6 +477,7 @@ def main():
         if st.button("🗑️ Suhbatni Tozalash", use_container_width=True, type="secondary"):
             st.session_state.messages = []
             st.session_state.query_count = 0
+            st.session_state.pending_query = None
             st.rerun()
         
         st.markdown("---")
@@ -384,39 +500,61 @@ def main():
             if message["role"] == "assistant" and "sources" in message and show_sources:
                 display_sources(message["sources"])
     
+    # Handle pending query (from example buttons)
+    if st.session_state.pending_query:
+        question = st.session_state.pending_query
+        st.session_state.pending_query = None
+        
+        with st.chat_message("user"):
+            st.markdown(question)
+        
+        with st.chat_message("assistant"):
+            status_placeholder = st.empty()
+            
+            result = query_documents(query_engine, question, status_placeholder)
+            
+            # Display answer
+            st.markdown(result['answer'])
+            
+            # Display sources
+            if show_sources and result['sources']:
+                display_sources(result['sources'])
+            
+            # Save to session state
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": result['answer'],
+                "sources": result['sources']
+            })
+    
     # Chat input
     if prompt := st.chat_input("💬 Savolingizni kiriting..."):
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.query_count += 1
         
         with st.chat_message("user"):
             st.markdown(prompt)
         
         # Generate response
         with st.chat_message("assistant"):
-            with st.spinner("🤔 Javob tayyorlanmoqda..."):
-                try:
-                    result = query_documents(query_engine, prompt)
-                    
-                    # Display answer
-                    st.markdown(result['answer'])
-                    
-                    # Display sources
-                    if show_sources and result['sources']:
-                        display_sources(result['sources'])
-                    
-                    # Save to session state
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": result['answer'],
-                        "sources": result['sources']
-                    })
-                    
-                    st.session_state.query_count += 1
-                    
-                except Exception as e:
-                    st.error(f"❌ Xatolik: {str(e)}")
-                    st.info("💡 Iltimos, qaytadan urinib ko'ring yoki so'rovni o'zgartiring.")
+            status_placeholder = st.empty()
+            
+            result = query_documents(query_engine, prompt, status_placeholder)
+            
+            # Display answer
+            st.markdown(result['answer'])
+            
+            # Display sources
+            if show_sources and result['sources']:
+                display_sources(result['sources'])
+            
+            # Save to session state
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": result['answer'],
+                "sources": result['sources']
+            })
     
     # Welcome message if no chat history
     if len(st.session_state.messages) == 0:
