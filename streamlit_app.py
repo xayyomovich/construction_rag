@@ -272,12 +272,9 @@ def main():
         st.markdown("---")
         
         # Example questions
-        st.markdown("### 💡 Misol Savollar")
+        st.markdown("### 💡 Misol Savol")
         example_questions = [
-            "Iskala xavfsizligi talablari?",
-            "Beton ishlarida harorat talablari?",
-            "Qurilish litsenziyasi olish tartibi?",
-            "Texnik nazorat talablari?"
+            "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor??"
         ]
         
         for q in example_questions:
