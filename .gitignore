@@ -7,6 +7,4 @@ construction_rag.py
 *.pyd
 .Python
 *.so
-ENV/
-.DS_Store
 __pycache__/
