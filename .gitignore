@@ -1,0 +1,8 @@
+.env
+venv/
+venv
+.venv
+construction_docs
+storage
+construction_rag.py
+*.sqlite3
