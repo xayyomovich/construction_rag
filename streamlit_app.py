@@ -1,6 +1,6 @@
 """
 Streamlit UI for Uzbekistan Ministry of Construction RAG System
-Beautiful GPT-like interface for querying construction law documents
+Professional interface for querying construction law documents
 """
 
 # Fix NLTK permissions issue on Streamlit Cloud
@@ -23,7 +23,8 @@ except LookupError:
 from llama_index.core import (
     VectorStoreIndex,
     Settings,
-    PromptTemplate
+    PromptTemplate,
+    StorageContext
 )
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
@@ -35,132 +36,197 @@ load_dotenv()
 
 # Page configuration
 st.set_page_config(
-    page_title="O'zbekiston Qurilish Vazirligi - Yuridik Yordamchi",
+    page_title="Qurilish Vazirligi - AI Yordamchi",
     page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for beautiful styling
+# Professional CSS styling
 st.markdown("""
 <style>
-    /* Main background */
-    .stApp {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    /* Import professional font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
     }
     
-    /* Header styling */
+    /* Main background with subtle gradient */
+    .stApp {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    /* Header with professional gradient */
     .main-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        padding: 2.5rem 2rem;
+        border-radius: 16px;
         color: white;
         text-align: center;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 40px rgba(30, 58, 138, 0.2);
     }
     
     .main-header h1 {
         margin: 0;
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         font-weight: 700;
+        letter-spacing: -0.5px;
     }
     
     .main-header p {
-        margin: 0.5rem 0 0 0;
-        font-size: 1.1rem;
-        opacity: 0.9;
+        margin: 0.8rem 0 0 0;
+        font-size: 1rem;
+        opacity: 0.95;
+        font-weight: 400;
     }
     
-    /* Chat message styling */
+    /* Professional chat messages */
     .stChatMessage {
         background: white;
-        border-radius: 10px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin: 0.75rem 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.06);
     }
     
-    /* Source cards */
-    .source-card {
+    /* Stats cards */
+    .stat-card {
         background: white;
-        border-left: 4px solid #667eea;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    
-    .source-title {
-        font-weight: 600;
-        color: #667eea;
-        margin-bottom: 0.5rem;
-    }
-    
-    .source-score {
-        color: #10b981;
-        font-size: 0.9rem;
-    }
-    
-    /* Sidebar styling */
-    .sidebar .sidebar-content {
-        background: white;
-    }
-    
-    /* Stats boxes */
-    .stat-box {
-        background: white;
-        padding: 1rem;
-        border-radius: 8px;
+        padding: 1.5rem;
+        border-radius: 12px;
         text-align: center;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
     
     .stat-number {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        color: #667eea;
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
     
     .stat-label {
         color: #6b7280;
-        font-size: 0.9rem;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Professional sidebar */
+    [data-testid="stSidebar"] {
+        background: white;
+        border-right: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Example question buttons */
+    .stButton button {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .stButton button:hover {
+        background: #f9fafb;
+        border-color: #3b82f6;
+        color: #3b82f6;
+        transform: translateX(4px);
+    }
+    
+    /* Source expander */
+    .streamlit-expanderHeader {
+        background: #f9fafb;
+        border-radius: 8px;
+        font-weight: 500;
+        color: #374151;
+    }
+    
+    /* Input styling */
+    .stChatInput {
+        border-radius: 12px;
+    }
+    
+    /* Divider */
+    hr {
+        margin: 1.5rem 0;
+        border: none;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Badge style */
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #dbeafe;
+        color: #1e40af;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin: 0.25rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def initialize_query_system():
     """Initialize and cache the query system"""
     
-    # Configure LlamaIndex settings
-    Settings.llm = OpenAI(
-        model="gpt-4o",
-        temperature=0.1,
-        api_key=os.getenv("OPENAI_API_KEY")
-    )
-    Settings.embed_model = OpenAIEmbedding(
-        model="text-embedding-3-small",
-        api_key=os.getenv("OPENAI_API_KEY")
-    )
-    
-    # Load index
-    persist_dir = "./storage"
-    collection_name = "construction_laws"
-    
-    if not os.path.exists(persist_dir):
-        st.error("❌ Indeks topilmadi! Avval data_ingestion.py ni ishga tushiring.")
-        st.stop()
-    
-    db = chromadb.PersistentClient(path=persist_dir)
-    chroma_collection = db.get_collection(collection_name)
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-    
-    index = VectorStoreIndex.from_vector_store(vector_store)
-    
-    # Setup query engine with legal prompt
-    qa_prompt_str = """Siz O'zbekiston Respublikasi Qurilish vazirligining yuridik yordamchisisiz.
+    try:
+        # Configure LlamaIndex settings
+        Settings.llm = OpenAI(
+            model="gpt-4o",
+            temperature=0.1,
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
+        Settings.embed_model = OpenAIEmbedding(
+            model="text-embedding-3-small",
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
+        
+        # Load index
+        persist_dir = "./storage"
+        collection_name = "construction_laws"
+        
+        if not os.path.exists(persist_dir):
+            raise ValueError("❌ Indeks topilmadi! Avval data_ingestion.py ni ishga tushiring.")
+        
+        # Initialize ChromaDB with explicit settings
+        db = chromadb.PersistentClient(
+            path=persist_dir,
+            settings=chromadb.Settings(
+                anonymized_telemetry=False,
+                allow_reset=True
+            )
+        )
+        
+        chroma_collection = db.get_collection(collection_name)
+        vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        
+        index = VectorStoreIndex.from_vector_store(
+            vector_store,
+            storage_context=storage_context
+        )
+        
+        # Setup query engine with legal prompt
+        qa_prompt_str = """Siz O'zbekiston Respublikasi Qurilish vazirligining yuridik yordamchisisiz.
 
 Sizning vazifangiz:
 1. Qurilish qonunlari bo'yicha aniq ma'lumot berish
@@ -183,16 +249,20 @@ Javob formatı:
 [Hujjat nomlari va moddalar]
 
 Javob:"""
-    
-    qa_prompt = PromptTemplate(qa_prompt_str)
-    
-    query_engine = index.as_query_engine(
-        similarity_top_k=5,
-        text_qa_template=qa_prompt,
-        response_mode="compact"
-    )
-    
-    return query_engine, chroma_collection
+        
+        qa_prompt = PromptTemplate(qa_prompt_str)
+        
+        query_engine = index.as_query_engine(
+            similarity_top_k=5,
+            text_qa_template=qa_prompt,
+            response_mode="compact"
+        )
+        
+        return query_engine, chroma_collection
+        
+    except Exception as e:
+        st.error(f"Xatolik: {str(e)}")
+        raise e
 
 
 def query_documents(query_engine, question: str) -> Dict:
@@ -206,8 +276,7 @@ def query_documents(query_engine, question: str) -> Dict:
         sources.append({
             'rank': i,
             'file_name': metadata.get('file_name', 'Noma\'lum hujjat'),
-            'score': node.score,
-            'text': node.node.text[:500]
+            'score': node.score
         })
     
     return {
@@ -218,22 +287,22 @@ def query_documents(query_engine, question: str) -> Dict:
 
 def display_sources(sources: List[Dict]):
     """Display source documents in collapsed expander"""
-    st.markdown("---")
-    
-    # Collapsed expander - user can expand if they want to see sources
     with st.expander(f"📚 Manba Hujjatlar ({len(sources)} ta)", expanded=False):
         for src in sources:
-            st.markdown(f"**📄 {src['file_name']}**")
-            st.caption(f"✓ Mos kelish: {src['score']:.1%}")
-            st.markdown("")  # spacing
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(f"**📄 {src['file_name']}**")
+            with col2:
+                st.markdown(f"<span class='badge'>{src['score']:.0%} mos</span>", unsafe_allow_html=True)
+            st.markdown("")
 
 
 def main():
-    # Header
+    # Professional Header
     st.markdown("""
     <div class="main-header">
-        <h1>🏛️ O'zbekiston Qurilish Vazirligi</h1>
-        <p>Yuridik Yordamchi - Sun'iy Intellekt Asosida</p>
+        <h1>🏛️ O'zbekiston Qurilish va Uy-joy Kommunal Xizmati Vazirligi</h1>
+        <p>Sun'iy Intellekt Asosidagi Yuridik Yordamchi</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -245,50 +314,51 @@ def main():
         st.session_state.query_count = 0
     
     # Initialize query system
-    try:
-        query_engine, collection = initialize_query_system()
-        doc_count = collection.count()
-    except Exception as e:
-        st.error(f"❌ Tizimni yuklashda xatolik: {e}")
-        st.stop()
+    with st.spinner("⏳ Tizim yuklanmoqda..."):
+        try:
+            query_engine, collection = initialize_query_system()
+            doc_count = collection.count()
+        except Exception as e:
+            st.error(f"❌ Tizimni yuklashda xatolik: {str(e)}")
+            st.info("💡 Iltimos, storage/ papkasining mavjudligini tekshiring.")
+            st.stop()
     
     # Sidebar
     with st.sidebar:
-        st.markdown("### ⚙️ Tizim Ma'lumotlari")
+        st.markdown("## ⚙️ Tizim Ma'lumotlari")
         
         # Stats
         col1, col2 = st.columns(2)
         with col1:
             st.markdown(f"""
-            <div class="stat-box">
+            <div class="stat-card">
                 <div class="stat-number">{doc_count}</div>
-                <div class="stat-label">Hujjat Chunk'lari</div>
+                <div class="stat-label">Hujjatlar</div>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown(f"""
-            <div class="stat-box">
+            <div class="stat-card">
                 <div class="stat-number">{st.session_state.query_count}</div>
                 <div class="stat-label">So'rovlar</div>
             </div>
             """, unsafe_allow_html=True)
         
-        st.markdown("---")
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # Settings
-        st.markdown("### 🎛️ Sozlamalar")
-        show_sources = st.checkbox("Manbalarni ko'rsatish", value=True)
+        st.markdown("## 🎛️ Sozlamalar")
+        show_sources = st.checkbox("📚 Manbalarni ko'rsatish", value=True)
         
-        st.markdown("---")
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # Example questions
-        st.markdown("### 💡 Misol Savollar")
+        st.markdown("## 💡 Misol Savollar")
+        
         example_questions = [
-            "Iskala xavfsizligi talablari?",
-            "Beton ishlarida harorat talablari?",
-            "Qurilish litsenziyasi olish tartibi?",
-            "Texnik nazorat talablari?"
+            "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor?",
+            "A.I. Ikramov kim?"
         ]
         
         for q in example_questions:
@@ -296,20 +366,22 @@ def main():
                 st.session_state.messages.append({"role": "user", "content": q})
                 st.rerun()
         
-        st.markdown("---")
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # Clear chat button
-        if st.button("🗑️ Suhbatni Tozalash", use_container_width=True):
+        if st.button("🗑️ Suhbatni Tozalash", use_container_width=True, type="secondary"):
             st.session_state.messages = []
             st.session_state.query_count = 0
             st.rerun()
         
         st.markdown("---")
+        
+        # Footer
         st.markdown("""
-        <div style="text-align: center; color: #6b7280; font-size: 0.8rem;">
-            <p>🏛️ O'zbekiston Respublikasi</p>
-            <p>Qurilish va Uy-joy Kommunal</p>
-            <p>Xizmati Vazirligi</p>
+        <div style="text-align: center; color: #6b7280; font-size: 0.8rem; line-height: 1.6;">
+            <p><strong>🏛️ O'zbekiston Respublikasi</strong></p>
+            <p>Qurilish va Uy-joy Kommunal<br>Xizmati Vazirligi</p>
+            <p style="margin-top: 1rem; font-size: 0.7rem;">Powered by GPT-4o</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -323,7 +395,7 @@ def main():
                 display_sources(message["sources"])
     
     # Chat input
-    if prompt := st.chat_input("Savolingizni kiriting..."):
+    if prompt := st.chat_input("💬 Savolingizni kiriting..."):
         # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         
@@ -332,14 +404,14 @@ def main():
         
         # Generate response
         with st.chat_message("assistant"):
-            with st.spinner("Javob tayyorlanmoqda..."):
+            with st.spinner("🤔 Javob tayyorlanmoqda..."):
                 try:
                     result = query_documents(query_engine, prompt)
                     
                     # Display answer
                     st.markdown(result['answer'])
                     
-                    # Display sources in collapsed expander
+                    # Display sources
                     if show_sources and result['sources']:
                         display_sources(result['sources'])
                     
@@ -353,16 +425,20 @@ def main():
                     st.session_state.query_count += 1
                     
                 except Exception as e:
-                    st.error(f"❌ Xatolik: {e}")
+                    st.error(f"❌ Xatolik: {str(e)}")
+                    st.info("💡 Iltimos, qaytadan urinib ko'ring yoki so'rovni o'zgartiring.")
     
-    # Footer
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: #6b7280; font-size: 0.85rem; padding: 1rem;">
-        <p>⚡ Powered by LlamaIndex, OpenAI & ChromaDB</p>
-        <p>© 2024 O'zbekiston Respublikasi Qurilish va Uy-joy Kommunal Xizmati Vazirligi</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Welcome message if no chat history
+    if len(st.session_state.messages) == 0:
+        st.markdown("""
+        <div style="text-align: center; padding: 3rem 1rem; color: #6b7280;">
+            <h3 style="color: #374151; margin-bottom: 1rem;">👋 Xush kelibsiz!</h3>
+            <p style="font-size: 1rem; line-height: 1.6;">
+                Qurilish qonunlari va me'yorlari haqida savollaringizni bering.<br>
+                Misol uchun chap tarafdagi tayyyor savollardan foydalanishingiz mumkin.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
