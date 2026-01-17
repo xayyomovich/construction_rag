@@ -205,23 +205,15 @@ def query_documents(query_engine, question: str) -> Dict:
     }
 
 
-def display_sources(sources: List[Dict], show_text: bool = False):
-    """Display source documents beautifully"""
+def display_sources(sources: List[Dict]):
+    """Display source documents in collapsed expander"""
     st.markdown("---")
     
-    # Create an expander for sources (collapsed by default to save space)
+    # Collapsed expander - user can expand if they want to see sources
     with st.expander(f"📚 Manba Hujjatlar ({len(sources)} ta)", expanded=False):
         for src in sources:
-            st.markdown(f"""
-            <div class="source-card">
-                <div class="source-title">📄 {src['file_name']}</div>
-                <div class="source-score">✓ Mos kelish: {src['score']:.1%}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Only show text excerpt if explicitly requested
-            if show_text:
-                st.caption(f"{src['text'][:150]}...")
+            st.markdown(f"**📄 {src['file_name']}**")
+            st.caption(f"✓ Mos kelish: {src['score']:.1%}")
             st.markdown("")  # spacing
 
 
@@ -276,7 +268,6 @@ def main():
         # Settings
         st.markdown("### 🎛️ Sozlamalar")
         show_sources = st.checkbox("Manbalarni ko'rsatish", value=True)
-        show_source_text = st.checkbox("Manba matnini ko'rsatish", value=False)
         
         st.markdown("---")
         
@@ -318,7 +309,7 @@ def main():
             
             # Display sources if available
             if message["role"] == "assistant" and "sources" in message and show_sources:
-                display_sources(message["sources"], show_source_text)
+                display_sources(message["sources"])
     
     # Chat input
     if prompt := st.chat_input("Savolingizni kiriting..."):
@@ -339,7 +330,7 @@ def main():
                     
                     # Display sources in collapsed expander
                     if show_sources and result['sources']:
-                        display_sources(result['sources'], show_source_text)
+                        display_sources(result['sources'])
                     
                     # Save to session state
                     st.session_state.messages.append({
