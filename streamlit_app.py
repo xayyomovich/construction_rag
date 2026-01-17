@@ -3,11 +3,22 @@ Streamlit UI for Uzbekistan Ministry of Construction RAG System
 Beautiful GPT-like interface for querying construction law documents
 """
 
-import streamlit as st
+# Fix NLTK permissions issue on Streamlit Cloud
 import os
+os.environ["NLTK_DATA"] = "/tmp/nltk_data"
+
+import streamlit as st
 from typing import List, Dict
 from dotenv import load_dotenv
 from datetime import datetime
+import nltk
+
+# Download NLTK data to /tmp (writable on Streamlit Cloud)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', download_dir='/tmp/nltk_data', quiet=True)
+    nltk.download('punkt_tab', download_dir='/tmp/nltk_data', quiet=True)
 
 from llama_index.core import (
     VectorStoreIndex,
@@ -272,9 +283,12 @@ def main():
         st.markdown("---")
         
         # Example questions
-        st.markdown("### 💡 Misol Savol")
+        st.markdown("### 💡 Misol Savollar")
         example_questions = [
-            "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor??"
+            "Iskala xavfsizligi talablari?",
+            "Beton ishlarida harorat talablari?",
+            "Qurilish litsenziyasi olish tartibi?",
+            "Texnik nazorat talablari?"
         ]
         
         for q in example_questions:
