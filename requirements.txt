@@ -18,3 +18,5 @@ chromadb==0.5.5
 
 # Utilities
 python-dotenv==1.0.1
+
+streamlit==1.29.0

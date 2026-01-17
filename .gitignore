@@ -1,8 +1,12 @@
 .env
 venv/
-venv
-.venv
 construction_docs
-storage
 construction_rag.py
-*.sqlite3
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+ENV/
+.DS_Store
+__pycache__/
