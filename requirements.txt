@@ -4,10 +4,8 @@ llama-index-core==0.10.68
 
 # LLM and Embeddings
 llama-index-llms-openai==0.1.29
-llama-index-llms-gemini==0.1.11
 llama-index-embeddings-openai==0.1.11
 openai==1.40.0
-google-generativeai==0.3.2
 
 # Advanced Document Parsing (LlamaParse)
 llama-parse==0.5.1
