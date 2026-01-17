@@ -14,7 +14,7 @@ from llama_index.core import (
     PromptTemplate
 )
 from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.google_genai import GoogleGenAI
+from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.chroma import ChromaVectorStore
 import chromadb
 
@@ -40,12 +40,12 @@ class LegalQuerySystem:
         self.persist_dir = persist_dir
         self.collection_name = collection_name
         
-        Settings.llm = GoogleGenAI(
-            model="models/gemini-1.5-flash", 
-            api_key=os.getenv("GOOGLE_API_KEY")
+        # Configure LlamaIndex settings
+        Settings.llm = OpenAI(
+            model="gpt-4o",
+            temperature=0.1,
+            api_key=os.getenv("OPENAI_API_KEY")
         )
-
-        # Keep OpenAI embeddings (cheap and high quality)
         Settings.embed_model = OpenAIEmbedding(
             model="text-embedding-3-small",
             api_key=os.getenv("OPENAI_API_KEY")
@@ -90,7 +90,7 @@ class LegalQuerySystem:
         qa_prompt_str = """Siz O'zbekiston Respublikasi Qurilish vazirligining yuridik yordamchisisiz.
 
 Sizning vazifangiz:
-1. Qurilishdagi qonunlar va Prezident qarorlari bo'yicha aniq ma'lumot berish
+1. Qurilish qonunlari bo'yicha aniq ma'lumot berish
 2. Har doim manba ko'rsatish (hujjat nomi, modda/bo'lim raqami)
 3. Majburiy va tavsiya talablarni farqlash
 4. Agar ma'lumot yo'q bo'lsa, halollik bilan tan olish
@@ -105,9 +105,6 @@ Javob formatі:
 
 📖 BATAFSIL TUSHUNTIRISH:
 [To'liq ma'lumot]
-
-📌 MANBALAR:
-[Hujjat nomlari va moddalar]
 
 Javob:"""
         
@@ -158,15 +155,15 @@ Javob:"""
         print(f"\n{answer}\n")
         
         # Display sources if requested
-        if show_sources and sources:
-            print(f"{'='*80}")
-            print(f"📚 MANBALAR ({len(sources)} ta)")
-            print(f"{'='*80}")
+        # if show_sources and sources:
+        #     print(f"{'='*80}")
+            # print(f"📚 MANBALAR ({len(sources)} ta)")
+            # print(f"{'='*80}")
             
-            for src in sources:
-                print(f"\n{src['rank']}. {src['file_name']}")
-                print(f"   Mos kelish: {src['score']:.1%}")
-                print(f"   Matn: {src['text'][:150]}...")
+        #     for src in sources:
+        #         print(f"\n{src['rank']}. {src['file_name']}")
+        #         print(f"   Mos kelish: {src['score']:.1%}")
+        #         print(f"   Matn: {src['text'][:150]}...")
         
         # Save to history
         result = {
@@ -286,7 +283,7 @@ def main():
     elif choice == "2":
         # Demo questions
         demo_questions = [
-            "Iskala qurilishi uchun xavfsizlik talablari qanday?"
+            "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor?"
         ]
         
         print("\n📝 Demo savollar:")
