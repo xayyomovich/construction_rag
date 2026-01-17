@@ -1,31 +1,17 @@
-streamlit==1.29.0
-llama-index==0.10.68
-llama-index-core==0.12.0
-llama-index-llms-openai==0.1.29
-llama-index-embeddings-openai==0.1.11
-llama-index-vector-stores-chroma==0.1.10
-llama-parse==0.4.9
-chromadb==0.5.5
-openai==1.40.0
+# Main Framework
+llama-index-core==0.14.12
+llama-index==0.14.12
+
+# OpenAI Plugins (Updated for Core 0.14)
+llama-index-llms-openai==0.6.13
+llama-index-embeddings-openai==0.5.1
+openai==1.109.1
+
+# Vector Store & Parsing
+llama-index-vector-stores-chroma==0.5.5
+chromadb==1.4.1
+llama-parse==0.6.54
+
+# Utilities
 python-dotenv==1.0.1
-
-# # Core RAG Framework
-# llama-index==0.10.68
-# llama-index-core==0.10.68
-
-# # LLM and Embeddings
-# llama-index-llms-openai==0.1.29
-# llama-index-embeddings-openai==0.1.11
-# openai==1.40.0
-
-# # Advanced Document Parsing (LlamaParse)
-# llama-parse==0.5.1
-
-# # Vector Store
-# llama-index-vector-stores-chroma==0.1.10
-# chromadb==0.5.5
-
-# # Utilities
-# python-dotenv==1.0.1
-
-# streamlit==1.29.0
+streamlit==1.53.0

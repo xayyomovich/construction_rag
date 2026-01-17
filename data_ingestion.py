@@ -146,8 +146,8 @@ class DocumentProcessor:
         # Configure semantic chunking
         print(f"\n⚙️  Semantik chunking sozlanmoqda...")
         splitter = SemanticSplitterNodeParser(
-            buffer_size=1,
-            breakpoint_percentile_threshold=95,
+            buffer_size=3,
+            breakpoint_percentile_threshold=85,
             embed_model=Settings.embed_model
         )
         

@@ -42,7 +42,7 @@ class LegalQuerySystem:
         
         # Configure LlamaIndex settings
         Settings.llm = OpenAI(
-            model="gpt-4o",
+            model="gpt-4",
             temperature=0.1,
             api_key=os.getenv("OPENAI_API_KEY")
         )
@@ -106,6 +106,9 @@ Javob formatі:
 📖 BATAFSIL TUSHUNTIRISH:
 [To'liq ma'lumot]
 
+📌 MANBALAR:
+[Hujjat nomlari va moddalar]
+
 Javob:"""
         
         qa_prompt = PromptTemplate(qa_prompt_str)
@@ -141,15 +144,15 @@ Javob:"""
         answer = str(response)
         
         # Extract sources
-        sources = []
-        for i, node in enumerate(response.source_nodes, 1):
-            metadata = node.node.metadata
-            sources.append({
-                'rank': i,
-                'file_name': metadata.get('file_name', 'Noma\'lum hujjat'),
-                'score': node.score,
-                'text': node.node.text[:300]
-            })
+        # sources = []
+        # for i, node in enumerate(response.source_nodes, 1):
+        #     metadata = node.node.metadata
+        #     sources.append({
+        #         'rank': i,
+        #         'file_name': metadata.get('file_name', 'Noma\'lum hujjat'),
+        #         'score': node.score,
+        #         'text': node.node.text[:300]
+        #     })
         
         # Display answer
         print(f"\n{answer}\n")
@@ -157,8 +160,8 @@ Javob:"""
         # Display sources if requested
         # if show_sources and sources:
         #     print(f"{'='*80}")
-            # print(f"📚 MANBALAR ({len(sources)} ta)")
-            # print(f"{'='*80}")
+        #     print(f"📚 MANBALAR ({len(sources)} ta)")
+        #     print(f"{'='*80}")
             
         #     for src in sources:
         #         print(f"\n{src['rank']}. {src['file_name']}")
@@ -169,8 +172,8 @@ Javob:"""
         result = {
             'question': question,
             'answer': answer,
-            'sources': sources,
-            'num_sources': len(sources)
+            # 'sources': sources,
+            # 'num_sources': len(sources)
         }
         self.chat_history.append(result)
         
@@ -228,20 +231,20 @@ Javob:"""
             except Exception as e:
                 print(f"\n❌ Xatolik: {e}")
     
-    def show_history(self):
-        """Display query history"""
-        if not self.chat_history:
-            print("\n📝 Hali savol berilmagan")
-            return
+    # def show_history(self):
+    #     """Display query history"""
+    #     if not self.chat_history:
+    #         print("\n📝 Hali savol berilmagan")
+    #         return
         
-        print(f"\n{'='*80}")
-        print(f"📜 SO'ROVLAR TARIXI ({len(self.chat_history)} ta)")
-        print(f"{'='*80}")
+    #     print(f"\n{'='*80}")
+    #     print(f"📜 SO'ROVLAR TARIXI ({len(self.chat_history)} ta)")
+    #     print(f"{'='*80}")
         
-        for i, item in enumerate(self.chat_history, 1):
-            print(f"\n{i}. {item['question']}")
-            print(f"   Javob: {item['answer'][:100]}...")
-            print(f"   Manbalar: {item['num_sources']} ta")
+    #     for i, item in enumerate(self.chat_history, 1):
+    #         print(f"\n{i}. {item['question']}")
+    #         print(f"   Javob: {item['answer'][:100]}...")
+    #         print(f"   Manbalar: {item['num_sources']} ta")
 
 
 def main():
@@ -283,7 +286,8 @@ def main():
     elif choice == "2":
         # Demo questions
         demo_questions = [
-            "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor?"
+             "Nechta Kompyuter (NP ENVY Desktop — 795-0030qd) bor?",
+            "A.I. Ikramov kim?"
         ]
         
         print("\n📝 Demo savollar:")
