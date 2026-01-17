@@ -207,23 +207,13 @@ def initialize_query_system():
         if not os.path.exists(persist_dir):
             raise ValueError("❌ Indeks topilmadi! Avval data_ingestion.py ni ishga tushiring.")
         
-        # Initialize ChromaDB with explicit settings
-        db = chromadb.PersistentClient(
-            path=persist_dir,
-            settings=chromadb.Settings(
-                anonymized_telemetry=False,
-                allow_reset=True
-            )
-        )
+        # Initialize ChromaDB - simple client without custom settings
+        db = chromadb.PersistentClient(path=persist_dir)
         
         chroma_collection = db.get_collection(collection_name)
         vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
-        storage_context = StorageContext.from_defaults(vector_store=vector_store)
         
-        index = VectorStoreIndex.from_vector_store(
-            vector_store,
-            storage_context=storage_context
-        )
+        index = VectorStoreIndex.from_vector_store(vector_store)
         
         # Setup query engine with legal prompt
         qa_prompt_str = """Siz O'zbekiston Respublikasi Qurilish vazirligining yuridik yordamchisisiz.
